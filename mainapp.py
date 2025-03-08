@@ -475,7 +475,6 @@ class BatchPredictor:
         
         return results_df
         
-config = Config() 
 # Model Training and Evaluation Tab
 def train_model_tab():
     st.header("Train Image Classification Model")
@@ -536,6 +535,7 @@ def train_model_tab():
         if st.button("Start Training"):
             # Build model
             classifier = EnhancedImageClassifier(config)
+            model, base_model = classifier.build_model()
             
             if model_type == "Ensemble Model (EfficientNetB3 + ResNet50V2)":
                 st.write("Building ensemble model (this will take longer but provides better accuracy)...")
