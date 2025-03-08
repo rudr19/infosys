@@ -160,7 +160,7 @@ class EnhancedImageClassifier:
     def build_model(self):
         """Build an enhanced model with EfficientNetB3"""
 
-        # Ensure NUM_CLASSES is set before proceeding
+        # Ensure NUM_CLASSES is set
         if self.config.NUM_CLASSES is None:
             raise ValueError("ERROR: NUM_CLASSES is not set. Ensure dataset processing is completed before model building.")
 
@@ -173,11 +173,11 @@ class EnhancedImageClassifier:
             input_shape=(self.config.IMG_SIZE, self.config.IMG_SIZE, self.config.CHANNELS)
         )
 
-        # Freeze the base model layers initially
+        # Freeze base model layers
         for layer in base_model.layers:
             layer.trainable = False
 
-        # Create model
+        # Model Architecture
         inputs = Input(shape=(self.config.IMG_SIZE, self.config.IMG_SIZE, self.config.CHANNELS))
         x = base_model(inputs)
         x = GlobalAveragePooling2D()(x)
@@ -188,7 +188,7 @@ class EnhancedImageClassifier:
         x = Dense(256, activation='relu')(x)
         x = Dropout(self.config.DROPOUT_RATE)(x)
 
-        # This line previously caused the error
+        # Ensure NUM_CLASSES is set correctly before Dense layer
         outputs = Dense(self.config.NUM_CLASSES, activation='softmax')(x)
 
         model = Model(inputs=inputs, outputs=outputs)
