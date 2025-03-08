@@ -159,12 +159,9 @@ class EnhancedImageClassifier:
 
     def build_model(self):
         """Build an enhanced model with EfficientNetB3"""
-
         # Ensure NUM_CLASSES is set
-        if self.config.NUM_CLASSES is None:
-            raise ValueError("ERROR: NUM_CLASSES is not set. Ensure dataset processing is completed before model building.")
-
-        print(f"DEBUG: NUM_CLASSES = {self.config.NUM_CLASSES}")  # Debugging Line
+        if self.config.NUM_CLASSES is None or self.config.NUM_CLASSES <= 0:
+            raise ValueError("ERROR: NUM_CLASSES is not set or invalid. Ensure dataset processing is completed before model building.")
 
         # Base pre-trained model
         base_model = EfficientNetB3(
@@ -201,7 +198,6 @@ class EnhancedImageClassifier:
         )
 
         return model, base_model
-
     
     def create_ensemble(self):
         """Create an ensemble of multiple models for better accuracy"""
@@ -478,7 +474,8 @@ class BatchPredictor:
         results_df['confidence'] = results_df['confidence'].apply(lambda x: f"{x:.2%}")
         
         return results_df
-
+        
+config = Config() 
 # Model Training and Evaluation Tab
 def train_model_tab():
     st.header("Train Image Classification Model")
