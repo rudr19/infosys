@@ -581,6 +581,7 @@ def train_model_tab():
         # Process dataset
         if st.button("Process Dataset"):
             with st.spinner("Extracting and processing dataset..."):
+                dataset_handler = DatasetHandler(config)
                 dataset_handler.process_uploaded_zip(uploaded_zip)
                 
                 # Process dataset
