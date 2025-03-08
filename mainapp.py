@@ -292,15 +292,20 @@ class EnhancedImageClassifier:
         x = Dense(256, activation='relu')(x)
         x = Dropout(self.config.DROPOUT_RATE)(x)
 
-        # Ensure NUM_CLASSES is set correctly before Dense layer
-        outputs = Dense(self.config.NUM_CLASSES, activation='softmax')(x)
+        # Set activation and loss function based on the number of classes
+        if self.config.NUM_CLASSES == 1:
+            outputs = Dense(1, activation='sigmoid')(x)  
+            loss_function = 'binary_crossentropy'  
+        else:
+            outputs = Dense(self.config.NUM_CLASSES, activation='softmax')(x)  
+            loss_function = 'categorical_crossentropy'  
 
         model = Model(inputs=inputs, outputs=outputs)
 
         # Compile model
         model.compile(
             optimizer=Adam(learning_rate=self.config.LEARNING_RATE),
-            loss='categorical_crossentropy',
+            loss=loss_function,
             metrics=['accuracy']
         )
 
