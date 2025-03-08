@@ -789,4 +789,4 @@ def main():
 
 if __name__ == "__main__":
     st.write(f"Running on port {PORT}")
-    os.system(f"streamlit run app.py --server.port={PORT}")
+    os.system(f"streamlit run streamlit-app.py --server.port={PORT}")
