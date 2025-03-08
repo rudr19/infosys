@@ -85,21 +85,22 @@ class DatasetHandler:
             st.success(f"Dataset extracted to {self.config.DATASET_PATH}")
             return True
     
-    def process_dataset(self):
-        """Process the dataset and create data generators"""
-        # Create data generators with augmentation for training
-        train_datagen = ImageDataGenerator(
-            preprocessing_function=efficientnet_preprocess,
-            rotation_range=20,
-            width_shift_range=0.2,
-            height_shift_range=0.2,
-            shear_range=0.2,
-            zoom_range=0.2,
-            horizontal_flip=True,
-            fill_mode='nearest',
-            validation_split=0.2
-        )
-        
+def process_dataset(self):
+    """Process the dataset and create data generators"""
+    # Create data generators with augmentation for training
+    train_datagen = ImageDataGenerator(
+        preprocessing_function=efficientnet_preprocess,
+        rotation_range=20,
+        width_shift_range=0.2,
+        height_shift_range=0.2,
+        shear_range=0.2,
+        zoom_range=0.2,
+        horizontal_flip=True,
+        fill_mode='nearest',
+        validation_split=0.2
+    )
+    
+    try:
         # Create generators for training and validation
         train_generator = train_datagen.flow_from_directory(
             self.config.DATASET_PATH,
@@ -109,7 +110,7 @@ class DatasetHandler:
             subset='training',
             shuffle=True
         )
-        
+
         validation_generator = train_datagen.flow_from_directory(
             self.config.DATASET_PATH,
             target_size=(self.config.IMG_SIZE, self.config.IMG_SIZE),
@@ -118,25 +119,40 @@ class DatasetHandler:
             subset='validation',
             shuffle=False
         )
-        
+
         # Get class names and update NUM_CLASSES
         class_names = list(train_generator.class_indices.keys())
         self.config.NUM_CLASSES = len(class_names)
-        st.write(f"Found {self.config.NUM_CLASSES} classes: {class_names}")
         
+        # Debugging output
+        print(f"DEBUG: Found classes {class_names}")
+        print(f"DEBUG: NUM_CLASSES set to {self.config.NUM_CLASSES}")
+
+        # Check if valid classes exist
+        if self.config.NUM_CLASSES is None or self.config.NUM_CLASSES <= 0:
+            st.error("Dataset processing failed. No valid class folders found. Ensure your dataset is structured correctly.")
+            return None, None, None
+
+        st.write(f"Found {self.config.NUM_CLASSES} classes: {class_names}")
+
         # Calculate dataset size
         total_train = train_generator.samples
         total_val = validation_generator.samples
         st.write(f"Training samples: {total_train}")
         st.write(f"Validation samples: {total_val}")
-        
+
         return train_generator, validation_generator, class_names
-    
-    def visualize_samples(self, generator, class_names, num_samples=10):
-        """Visualize random samples from the dataset"""
-        # Get a batch of images
+
+    except Exception as e:
+        st.error(f"Error during dataset processing: {str(e)}")
+        return None, None, None
+
+def visualize_samples(self, generator, class_names, num_samples=10):
+    """Visualize random samples from the dataset"""
+    # Get a batch of images
+    try:
         images, labels = next(generator)
-        
+
         # Create a Streamlit figure
         fig, axes = plt.subplots(2, 5, figsize=(20, 10))
         for i in range(min(num_samples, len(images))):
@@ -151,6 +167,10 @@ class DatasetHandler:
             axes[row, col].axis('off')
         plt.tight_layout()
         return fig
+    except Exception as e:
+        st.error(f"Error while visualizing samples: {str(e)}")
+        return None
+
         
 # Model architecture
 class EnhancedImageClassifier:
