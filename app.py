@@ -22,6 +22,10 @@ import shutil
 import time
 import tempfile
 
+
+# Get the port from the environment (Render assigns it dynamically)
+PORT = os.environ.get("PORT", 10000)
+
 # Set page configuration
 st.set_page_config(
     page_title="Advanced Image Classification",
@@ -29,6 +33,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
 
 # Set seeds for reproducibility
 def set_seeds(seed=42):
@@ -782,6 +787,6 @@ def main():
     with tab3:
         about_tab()
 
-# Run the app
 if __name__ == "__main__":
-    main()
+    st.write(f"Running on port {PORT}")
+    os.system(f"streamlit run app.py --server.port={PORT}")
