@@ -781,26 +781,19 @@ def main():
     # App header
     st.markdown('<p class="main-header">Advanced Image Classification System</p>', unsafe_allow_html=True)
     
-    # Initialize session states
+    # Initialize session state
     if 'dataset_processed' not in st.session_state:
         st.session_state['dataset_processed'] = False
     
-    if 'NUM_CLASSES' not in st.session_state:
-        st.session_state['NUM_CLASSES'] = None
-
     # Create tabs
     tab1, tab2, tab3 = st.tabs(["Train Model", "Prediction", "About"])
     
     with tab1:
-        # Only allow training if dataset is processed
-        if st.session_state['dataset_processed']:
-            train_model_tab()
-        else:
-            st.warning("⚠️ Please upload and process your dataset first before training.")
-
+        train_model_tab()
+    
     with tab2:
         prediction_tab()
-
+    
     with tab3:
         about_tab()
 
