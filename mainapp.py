@@ -158,7 +158,6 @@ class EnhancedImageClassifier:
         self.config = config
         
     def build_model(self):
-    """Build an enhanced model with EfficientNetB3"""
 
     # Ensure NUM_CLASSES is set
     if self.config.NUM_CLASSES is None:
