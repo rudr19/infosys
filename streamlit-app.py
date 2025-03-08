@@ -24,7 +24,7 @@ import tempfile
 
 
 # Get the port from the environment (Render assigns it dynamically)
-PORT = os.environ.get("PORT", 10000)
+PORT = os.environ.get("PORT", 8501)
 
 # Set page configuration
 st.set_page_config(
