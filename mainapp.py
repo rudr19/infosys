@@ -61,215 +61,180 @@ class Config:
     
 config = Config()
 
-# Dataset handling
+
+import os
+import numpy as np
+import pandas as pd
+import streamlit as st
+import matplotlib.pyplot as plt
+from tensorflow.keras.preprocessing.image import ImageDataGenerator, img_to_array, load_img
+from tensorflow.keras.applications.efficientnet import preprocess_input as efficientnet_preprocess
+
 class DatasetHandler:
     def __init__(self, config):
         self.config = config
+
+    def process_dataset(self):
+        """Process datasets in different formats"""
         
-    def process_uploaded_zip(self, uploaded_zip):
-        """Process uploaded zip file containing dataset"""
-        # Create temp directory
-        with tempfile.TemporaryDirectory() as tmp_dir:
-            # Save the uploaded zip file
-            zip_path = os.path.join(tmp_dir, "dataset.zip")
-            with open(zip_path, "wb") as f:
-                f.write(uploaded_zip.getbuffer())
-            
-            # Ensure dataset directory exists
-            if os.path.exists(self.config.DATASET_PATH):
-                shutil.rmtree(self.config.DATASET_PATH)
-            os.makedirs(self.config.DATASET_PATH)
-            
-            # Extract the zip file
-            with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-                zip_ref.extractall(self.config.DATASET_PATH)
-            
-            st.success(f"Dataset extracted to {self.config.DATASET_PATH}")
-            return True
-    
+        print(f"DEBUG: Checking dataset at {self.config.DATASET_PATH}")
 
+        if not os.path.exists(self.config.DATASET_PATH):
+            st.error(f"Dataset path {self.config.DATASET_PATH} not found!")
+            return None, None, None
 
-def process_dataset(self):
-    """Process datasets in different formats"""
-    
-    # Debugging: Check dataset path
-    print(f"DEBUG: Checking dataset at {self.config.DATASET_PATH}")
+        # Detect dataset format
+        dataset_format = self.detect_dataset_format()
+        
+        if dataset_format == "folders":
+            return self.process_folder_structure()
+        elif dataset_format == "csv":
+            return self.process_csv_labels()
+        elif dataset_format == "single_folder":
+            return self.process_single_folder()
+        else:
+            st.error("Unsupported dataset format! Ensure images have valid class labels.")
+            return None, None, None
 
-    if not os.path.exists(self.config.DATASET_PATH):
-        st.error(f"Dataset path {self.config.DATASET_PATH} not found!")
-        return None, None, None
+    def detect_dataset_format(self):
+        """Detects the dataset format"""
+        dataset_path = self.config.DATASET_PATH
 
-    # Detect dataset format
-    dataset_format = self.detect_dataset_format()
-    
-    if dataset_format == "folders":
-        return self.process_folder_structure()
-    elif dataset_format == "csv":
-        return self.process_csv_labels()
-    elif dataset_format == "single_folder":
-        return self.process_single_folder()
-    else:
-        st.error("Unsupported dataset format! Ensure images have valid class labels.")
-        return None, None, None
+        if any(os.path.isdir(os.path.join(dataset_path, d)) for d in os.listdir(dataset_path)):
+            return "folders"
 
+        if any(f.endswith(".csv") for f in os.listdir(dataset_path)):
+            return "csv"
 
-def detect_dataset_format(self):
-    """Detects the dataset format"""
-    dataset_path = self.config.DATASET_PATH
+        if all(f.lower().endswith((".jpg", ".jpeg", ".png")) for f in os.listdir(dataset_path)):
+            return "single_folder"
 
-    # Format 1: Folder structure (dataset/class1/, dataset/class2/)
-    if any(os.path.isdir(os.path.join(dataset_path, d)) for d in os.listdir(dataset_path)):
-        return "folders"
+        return None
 
-    # Format 2: CSV file with labels
-    if any(f.endswith(".csv") for f in os.listdir(dataset_path)):
-        return "csv"
-
-    # Format 3: Single folder with images (no subdirectories)
-    if all(f.lower().endswith((".jpg", ".jpeg", ".png")) for f in os.listdir(dataset_path)):
-        return "single_folder"
-
-    return None
-
-
-def process_folder_structure(self):
-    """Process dataset with standard folder-based structure"""
-    train_datagen = ImageDataGenerator(
-        preprocessing_function=efficientnet_preprocess,
-        rotation_range=20,
-        width_shift_range=0.2,
-        height_shift_range=0.2,
-        shear_range=0.2,
-        zoom_range=0.2,
-        horizontal_flip=True,
-        fill_mode='nearest',
-        validation_split=0.2
-    )
-
-    try:
-        train_generator = train_datagen.flow_from_directory(
-            self.config.DATASET_PATH,
-            target_size=(self.config.IMG_SIZE, self.config.IMG_SIZE),
-            batch_size=self.config.BATCH_SIZE,
-            class_mode='categorical',
-            subset='training',
-            shuffle=True
+    def process_folder_structure(self):
+        """Process dataset with standard folder-based structure"""
+        train_datagen = ImageDataGenerator(
+            preprocessing_function=efficientnet_preprocess,
+            rotation_range=20,
+            width_shift_range=0.2,
+            height_shift_range=0.2,
+            shear_range=0.2,
+            zoom_range=0.2,
+            horizontal_flip=True,
+            fill_mode='nearest',
+            validation_split=0.2
         )
 
-        validation_generator = train_datagen.flow_from_directory(
-            self.config.DATASET_PATH,
-            target_size=(self.config.IMG_SIZE, self.config.IMG_SIZE),
-            batch_size=self.config.BATCH_SIZE,
-            class_mode='categorical',
-            subset='validation',
-            shuffle=False
-        )
+        try:
+            train_generator = train_datagen.flow_from_directory(
+                self.config.DATASET_PATH,
+                target_size=(self.config.IMG_SIZE, self.config.IMG_SIZE),
+                batch_size=self.config.BATCH_SIZE,
+                class_mode='categorical',
+                subset='training',
+                shuffle=True
+            )
 
-        class_names = list(train_generator.class_indices.keys())
+            validation_generator = train_datagen.flow_from_directory(
+                self.config.DATASET_PATH,
+                target_size=(self.config.IMG_SIZE, self.config.IMG_SIZE),
+                batch_size=self.config.BATCH_SIZE,
+                class_mode='categorical',
+                subset='validation',
+                shuffle=False
+            )
+
+            class_names = list(train_generator.class_indices.keys())
+            self.config.NUM_CLASSES = len(class_names)
+
+            print(f"DEBUG: Found classes {class_names}")
+            print(f"DEBUG: NUM_CLASSES set to {self.config.NUM_CLASSES}")
+
+            if self.config.NUM_CLASSES is None or self.config.NUM_CLASSES <= 0:
+                st.error("Dataset processing failed. No valid class folders found.")
+                return None, None, None
+
+            return train_generator, validation_generator, class_names
+
+        except Exception as e:
+            st.error(f"Error during dataset processing: {str(e)}")
+            print(f"ERROR: {str(e)}")
+            return None, None, None
+
+    def process_csv_labels(self):
+        """Process dataset using a CSV file with image paths and labels"""
+        dataset_path = self.config.DATASET_PATH
+        csv_file = next(f for f in os.listdir(dataset_path) if f.endswith(".csv"))
+        df = pd.read_csv(os.path.join(dataset_path, csv_file))
+
+        if "image_path" not in df.columns or "label" not in df.columns:
+            st.error("CSV must contain 'image_path' and 'label' columns.")
+            return None, None, None
+
+        class_names = df["label"].unique().tolist()
         self.config.NUM_CLASSES = len(class_names)
 
-        print(f"DEBUG: Found classes {class_names}")
-        print(f"DEBUG: NUM_CLASSES set to {self.config.NUM_CLASSES}")
+        images = []
+        labels = []
+        
+        for _, row in df.iterrows():
+            img_path = os.path.join(dataset_path, row["image_path"])
+            if os.path.exists(img_path):
+                img = load_img(img_path, target_size=(self.config.IMG_SIZE, self.config.IMG_SIZE))
+                img_array = img_to_array(img)
+                images.append(img_array)
+                labels.append(class_names.index(row["label"]))
 
-        if self.config.NUM_CLASSES is None or self.config.NUM_CLASSES <= 0:
-            st.error("Dataset processing failed. No valid class folders found. Ensure your dataset is structured correctly.")
+        images = np.array(images) / 255.0
+        labels = np.array(labels)
+
+        return images, labels, class_names
+
+    def process_single_folder(self):
+        """Process a dataset with all images in a single folder (No subfolders)"""
+        dataset_path = self.config.DATASET_PATH
+        image_files = [f for f in os.listdir(dataset_path) if f.lower().endswith((".jpg", ".jpeg", ".png"))]
+
+        if not image_files:
+            st.error("No valid image files found in the dataset.")
             return None, None, None
 
-        st.write(f"Found {self.config.NUM_CLASSES} classes: {class_names}")
-
-        total_train = train_generator.samples
-        total_val = validation_generator.samples
-
-        print(f"DEBUG: Training samples = {total_train}, Validation samples = {total_val}")
-
-        if total_train == 0 or total_val == 0:
-            st.error("Dataset processing failed. No images found in dataset folders.")
-            return None, None, None
-
-        return train_generator, validation_generator, class_names
-
-    except Exception as e:
-        st.error(f"Error during dataset processing: {str(e)}")
-        print(f"ERROR: {str(e)}")
-        return None, None, None
-
-
-def process_csv_labels(self):
-    """Process dataset using a CSV file with image paths and labels"""
-    dataset_path = self.config.DATASET_PATH
-    csv_file = next(f for f in os.listdir(dataset_path) if f.endswith(".csv"))
-    df = pd.read_csv(os.path.join(dataset_path, csv_file))
-
-    if "image_path" not in df.columns or "label" not in df.columns:
-        st.error("CSV must contain 'image_path' and 'label' columns.")
-        return None, None, None
-
-    class_names = df["label"].unique().tolist()
-    self.config.NUM_CLASSES = len(class_names)
-
-    images = []
-    labels = []
-    
-    for _, row in df.iterrows():
-        img_path = os.path.join(dataset_path, row["image_path"])
-        if os.path.exists(img_path):
+        images = []
+        labels = []
+        
+        for img_file in image_files:
+            img_path = os.path.join(dataset_path, img_file)
             img = load_img(img_path, target_size=(self.config.IMG_SIZE, self.config.IMG_SIZE))
             img_array = img_to_array(img)
             images.append(img_array)
-            labels.append(class_names.index(row["label"]))
+            labels.append(0)  # No specific class, single-folder dataset
 
-    images = np.array(images) / 255.0
-    labels = np.array(labels)
+        images = np.array(images) / 255.0
+        labels = np.array(labels)
 
-    return images, labels, class_names
+        self.config.NUM_CLASSES = 1  # Single-class dataset
 
+        return images, labels, ["SingleClass"]
 
-def process_single_folder(self):
-    """Process a dataset with all images in a single folder (No subfolders)"""
-    dataset_path = self.config.DATASET_PATH
-    image_files = [f for f in os.listdir(dataset_path) if f.lower().endswith((".jpg", ".jpeg", ".png"))]
+    def visualize_samples(self, generator, class_names, num_samples=10):
+        """Visualize random samples from the dataset"""
+        try:
+            images, labels = next(generator)
 
-    if not image_files:
-        st.error("No valid image files found in the dataset.")
-        return None, None, None
-
-    images = []
-    labels = []
-    
-    for img_file in image_files:
-        img_path = os.path.join(dataset_path, img_file)
-        img = load_img(img_path, target_size=(self.config.IMG_SIZE, self.config.IMG_SIZE))
-        img_array = img_to_array(img)
-        images.append(img_array)
-        labels.append(0)  
-
-    images = np.array(images) / 255.0
-    labels = np.array(labels)
-
-    self.config.NUM_CLASSES = 1  # Single-class dataset
-
-    return images, labels, ["SingleClass"]
-
-
-def visualize_samples(self, generator, class_names, num_samples=10):
-    """Visualize random samples from the dataset"""
-    try:
-        images, labels = next(generator)
-
-        fig, axes = plt.subplots(2, 5, figsize=(20, 10))
-        for i in range(min(num_samples, len(images))):
-            row, col = i // 5, i % 5
-            img = images[i]
-            img = (img - img.min()) / (img.max() - img.min())  # Normalize for visualization
-            axes[row, col].imshow(img)
-            class_idx = np.argmax(labels[i])
-            axes[row, col].set_title(f"Class: {class_names[class_idx]}")
-            axes[row, col].axis('off')
-        plt.tight_layout()
-        return fig
-    except Exception as e:
-        st.error(f"Error while visualizing samples: {str(e)}")
-        return None
+            fig, axes = plt.subplots(2, 5, figsize=(20, 10))
+            for i in range(min(num_samples, len(images))):
+                row, col = i // 5, i % 5
+                img = images[i]
+                img = (img - img.min()) / (img.max() - img.min())  # Normalize for visualization
+                axes[row, col].imshow(img)
+                class_idx = np.argmax(labels[i])
+                axes[row, col].set_title(f"Class: {class_names[class_idx]}")
+                axes[row, col].axis('off')
+            plt.tight_layout()
+            return fig
+        except Exception as e:
+            st.error(f"Error while visualizing samples: {str(e)}")
+            return None
 
 
         
@@ -610,7 +575,8 @@ def train_model_tab():
     
     if uploaded_zip is not None:
         # Initialize dataset handler
-        dataset_handler = DatasetHandler(config)
+        dataset_handler = DatasetHandler(config)  
+        train_generator, validation_generator, class_names = dataset_handler.process_dataset()
         
         # Process dataset
         if st.button("Process Dataset"):
