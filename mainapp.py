@@ -62,21 +62,37 @@ class Config:
 config = Config()
 
 
-import os
-import numpy as np
-import pandas as pd
-import streamlit as st
-import matplotlib.pyplot as plt
-from tensorflow.keras.preprocessing.image import ImageDataGenerator, img_to_array, load_img
-from tensorflow.keras.applications.efficientnet import preprocess_input as efficientnet_preprocess
-
 class DatasetHandler:
     def __init__(self, config):
         self.config = config
 
+    def process_uploaded_zip(self, uploaded_zip):
+        """Extracts uploaded dataset ZIP file and saves it to the dataset path."""
+        dataset_path = self.config.DATASET_PATH  
+
+        # Ensure dataset directory exists
+        if not os.path.exists(dataset_path):
+            os.makedirs(dataset_path)
+
+        # Save ZIP file temporarily
+        temp_zip_path = os.path.join(dataset_path, "dataset.zip")
+        with open(temp_zip_path, "wb") as f:
+            f.write(uploaded_zip.getbuffer())
+
+        # Extract ZIP file
+        try:
+            with zipfile.ZipFile(temp_zip_path, "r") as zip_ref:
+                zip_ref.extractall(dataset_path)
+            os.remove(temp_zip_path)  # Remove ZIP after extraction
+            st.success("Dataset uploaded and extracted successfully!")
+        except Exception as e:
+            st.error(f"Error extracting dataset: {str(e)}")
+            return False
+
+        return True
+
     def process_dataset(self):
         """Process datasets in different formats"""
-        
         print(f"DEBUG: Checking dataset at {self.config.DATASET_PATH}")
 
         if not os.path.exists(self.config.DATASET_PATH):
@@ -164,7 +180,12 @@ class DatasetHandler:
     def process_csv_labels(self):
         """Process dataset using a CSV file with image paths and labels"""
         dataset_path = self.config.DATASET_PATH
-        csv_file = next(f for f in os.listdir(dataset_path) if f.endswith(".csv"))
+        csv_file = next((f for f in os.listdir(dataset_path) if f.endswith(".csv")), None)
+
+        if not csv_file:
+            st.error("No CSV file found in dataset directory.")
+            return None, None, None
+
         df = pd.read_csv(os.path.join(dataset_path, csv_file))
 
         if "image_path" not in df.columns or "label" not in df.columns:
