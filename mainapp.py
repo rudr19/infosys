@@ -228,7 +228,7 @@ class EnhancedImageClassifier:
         combined = BatchNormalization()(combined)
         combined = Dense(256, activation='relu')(combined)
         combined = Dropout(0.3)(combined)
-        outputs = Dense(self.config.NUM_CLASSES, activation='softmax')(combined)
+        outputs = Dense(self.config.NUM_CLASSES, activation='softmax')(x)
         
         # Create ensemble model with multiple inputs
         ensemble_model = Model(inputs=[efficient_net_input, resnet_input], outputs=outputs)
