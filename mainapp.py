@@ -151,51 +151,56 @@ class DatasetHandler:
             axes[row, col].axis('off')
         plt.tight_layout()
         return fig
+        
+# Model architecture
+class EnhancedImageClassifier:
+    def __init__(self, config):
+        self.config = config
 
-def build_model(self):
-    """Build an enhanced model with EfficientNetB3"""
+    def build_model(self):
+        """Build an enhanced model with EfficientNetB3"""
 
-    # Step 1: Ensure NUM_CLASSES is set before proceeding
-    if self.config.NUM_CLASSES is None:
-        raise ValueError("ERROR: NUM_CLASSES is not set. Ensure dataset processing is completed before model building.")
+        # Ensure NUM_CLASSES is set before proceeding
+        if self.config.NUM_CLASSES is None:
+            raise ValueError("ERROR: NUM_CLASSES is not set. Ensure dataset processing is completed before model building.")
 
-    print(f"DEBUG: NUM_CLASSES = {self.config.NUM_CLASSES}")  # Debugging Line
+        print(f"DEBUG: NUM_CLASSES = {self.config.NUM_CLASSES}")  # Debugging Line
 
-    # Step 2: Base pre-trained model
-    base_model = EfficientNetB3(
-        weights='imagenet',
-        include_top=False,
-        input_shape=(self.config.IMG_SIZE, self.config.IMG_SIZE, self.config.CHANNELS)
-    )
+        # Base pre-trained model
+        base_model = EfficientNetB3(
+            weights='imagenet',
+            include_top=False,
+            input_shape=(self.config.IMG_SIZE, self.config.IMG_SIZE, self.config.CHANNELS)
+        )
 
-    # Step 3: Freeze base model layers
-    for layer in base_model.layers:
-        layer.trainable = False
+        # Freeze the base model layers initially
+        for layer in base_model.layers:
+            layer.trainable = False
 
-    # Step 4: Model Architecture
-    inputs = Input(shape=(self.config.IMG_SIZE, self.config.IMG_SIZE, self.config.CHANNELS))
-    x = base_model(inputs)
-    x = GlobalAveragePooling2D()(x)
-    x = BatchNormalization()(x)
-    x = Dense(512, activation='relu')(x)
-    x = Dropout(self.config.DROPOUT_RATE)(x)
-    x = BatchNormalization()(x)
-    x = Dense(256, activation='relu')(x)
-    x = Dropout(self.config.DROPOUT_RATE)(x)
+        # Create model
+        inputs = Input(shape=(self.config.IMG_SIZE, self.config.IMG_SIZE, self.config.CHANNELS))
+        x = base_model(inputs)
+        x = GlobalAveragePooling2D()(x)
+        x = BatchNormalization()(x)
+        x = Dense(512, activation='relu')(x)
+        x = Dropout(self.config.DROPOUT_RATE)(x)
+        x = BatchNormalization()(x)
+        x = Dense(256, activation='relu')(x)
+        x = Dropout(self.config.DROPOUT_RATE)(x)
 
-    # Step 5: Ensure NUM_CLASSES 
-    outputs = Dense(self.config.NUM_CLASSES, activation='softmax')(x)  
+        # This line previously caused the error
+        outputs = Dense(self.config.NUM_CLASSES, activation='softmax')(x)
 
-    model = Model(inputs=inputs, outputs=outputs)
+        model = Model(inputs=inputs, outputs=outputs)
 
-    # Step 6: Compile model
-    model.compile(
-        optimizer=Adam(learning_rate=self.config.LEARNING_RATE),
-        loss='categorical_crossentropy',
-        metrics=['accuracy']
-    )
+        # Compile model
+        model.compile(
+            optimizer=Adam(learning_rate=self.config.LEARNING_RATE),
+            loss='categorical_crossentropy',
+            metrics=['accuracy']
+        )
 
-    return model, base_model
+        return model, base_model
 
     
     def create_ensemble(self):
