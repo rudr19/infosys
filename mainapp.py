@@ -99,7 +99,7 @@ def process_dataset(self):
         fill_mode='nearest',
         validation_split=0.2
     )
-    
+
     try:
         # Create generators for training and validation
         train_generator = train_datagen.flow_from_directory(
@@ -123,7 +123,7 @@ def process_dataset(self):
         # Get class names and update NUM_CLASSES
         class_names = list(train_generator.class_indices.keys())
         self.config.NUM_CLASSES = len(class_names)
-        
+
         # Debugging output
         print(f"DEBUG: Found classes {class_names}")
         print(f"DEBUG: NUM_CLASSES set to {self.config.NUM_CLASSES}")
@@ -138,6 +138,14 @@ def process_dataset(self):
         # Calculate dataset size
         total_train = train_generator.samples
         total_val = validation_generator.samples
+
+        # Debugging output
+        print(f"DEBUG: Training samples = {total_train}, Validation samples = {total_val}")
+
+        if total_train == 0 or total_val == 0:
+            st.error("Dataset processing failed. No images found in dataset folders.")
+            return None, None, None
+
         st.write(f"Training samples: {total_train}")
         st.write(f"Validation samples: {total_val}")
 
@@ -145,7 +153,9 @@ def process_dataset(self):
 
     except Exception as e:
         st.error(f"Error during dataset processing: {str(e)}")
+        print(f"ERROR: {str(e)}")  # Print error for debugging
         return None, None, None
+
 
 def visualize_samples(self, generator, class_names, num_samples=10):
     """Visualize random samples from the dataset"""
