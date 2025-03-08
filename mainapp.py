@@ -499,6 +499,11 @@ def train_model_tab():
                 # Process dataset
                 train_generator, validation_generator, class_names = dataset_handler.process_dataset()
                 
+                # Ensure NUM_CLASSES is set
+                if config.NUM_CLASSES is None or config.NUM_CLASSES <= 0:
+                    st.error("Dataset processing failed. No valid classes were found.")
+                    return
+                
                 # Store class names in session state
                 st.session_state['class_names'] = class_names
                 
@@ -513,11 +518,18 @@ def train_model_tab():
                 
                 # Set dataset processed flag
                 st.session_state['dataset_processed'] = True
-    
+
     # Model Selection and Training
     st.subheader("2. Model Selection and Training")
     
     if 'dataset_processed' in st.session_state and st.session_state['dataset_processed']:
+        # Debugging
+        st.write(f"DEBUG: NUM_CLASSES before building model = {config.NUM_CLASSES}")
+
+        if config.NUM_CLASSES is None or config.NUM_CLASSES <= 0:
+            st.error("Dataset processing failed. NUM_CLASSES is not valid. Please reprocess the dataset.")
+            return
+        
         # Model choice
         model_type = st.radio(
             "Select model type:",
@@ -535,20 +547,16 @@ def train_model_tab():
         if st.button("Start Training"):
             # Build model
             classifier = EnhancedImageClassifier(config)
-            model, base_model = classifier.build_model()
             
             if model_type == "Ensemble Model (EfficientNetB3 + ResNet50V2)":
                 st.write("Building ensemble model (this will take longer but provides better accuracy)...")
                 model = classifier.create_ensemble()
-                # Store model in session state
-                st.session_state['model'] = model
-                st.session_state['model_type'] = 'ensemble'
             else:
                 model, base_model = classifier.build_model()
-                # Store model and base_model in session state
-                st.session_state['model'] = model
-                st.session_state['base_model'] = base_model
-                st.session_state['model_type'] = 'single'
+            
+            # Store model in session state
+            st.session_state['model'] = model
+            st.session_state['model_type'] = model_type
             
             # Train model
             model, history = classifier.train_model(
@@ -596,7 +604,7 @@ def train_model_tab():
                 model.save(config.MODEL_PATH)
                 # Provide download link
                 with open(config.MODEL_PATH, "rb") as file:
-                    btn = st.download_button(
+                    st.download_button(
                         label="Download Model",
                         data=file,
                         file_name="image_classification_model.h5",
@@ -773,19 +781,26 @@ def main():
     # App header
     st.markdown('<p class="main-header">Advanced Image Classification System</p>', unsafe_allow_html=True)
     
-    # Initialize session state
+    # Initialize session states
     if 'dataset_processed' not in st.session_state:
         st.session_state['dataset_processed'] = False
     
+    if 'NUM_CLASSES' not in st.session_state:
+        st.session_state['NUM_CLASSES'] = None
+
     # Create tabs
     tab1, tab2, tab3 = st.tabs(["Train Model", "Prediction", "About"])
     
     with tab1:
-        train_model_tab()
-    
+        # Only allow training if dataset is processed
+        if st.session_state['dataset_processed']:
+            train_model_tab()
+        else:
+            st.warning("⚠️ Please upload and process your dataset first before training.")
+
     with tab2:
         prediction_tab()
-    
+
     with tab3:
         about_tab()
 
