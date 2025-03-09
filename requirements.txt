@@ -6,4 +6,4 @@ matplotlib
 seaborn
 pillow
 scikit-learn
-opencv-python
+opencv-python-headless==4.11.0.86
